@@ -661,7 +661,7 @@ void ExecuteTemplateMatchEx(
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void CreateDirectory(const std::string& strFolderPath) {
-  std::vector<std::string> strFolderList = Split(strFolderPath, "/");
+  std::vector<std::string> strFolderList = gazosan::split(strFolderPath, "/");
 
   std::string str;
   for (const auto& strFolder : strFolderList) {
@@ -671,47 +671,6 @@ void CreateDirectory(const std::string& strFolderPath) {
     }
     mkdir(str.c_str(), S_IRWXU);
   }
-}
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-std::vector<std::string> Split(const std::string& s, const std::string& delim) {
-  std::vector<std::string> elems;
-  std::clog << s << std::endl;
-
-  std::string::size_type pos = 0;
-  while (pos != std::string::npos) {
-    std::string::size_type p = s.find(delim, pos);
-    if (p == std::string::npos) {
-      elems.push_back(s.substr(pos));
-      break;
-    } else {
-      elems.push_back(s.substr(pos, p - pos));
-    }
-    pos = p + delim.size();
-  }
-
-  return elems;
-}
-std::vector<std::string> Split(const std::string& s, char delim) {
-  std::vector<std::string> elems;
-  std::string item;
-  std::clog << s << std::endl;
-  for (char ch : s) {
-    if (ch == delim) {
-      if (!item.empty()) {
-        elems.push_back(item);
-      }
-      item.clear();
-    } else {
-      item += ch;
-    }
-  }
-  if (!item.empty()) {
-    elems.push_back(item);
-  }
-
-  return elems;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 

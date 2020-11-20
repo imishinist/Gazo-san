@@ -70,6 +70,10 @@ class Context {
   }
 };
 
+// util.cpp
+
+std::vector<std::string> split(const std::string& s, const std::string& delim);
+
 }  // namespace gazosan
 
 // pixel connectivity
@@ -121,8 +125,6 @@ void ExecuteTemplateMatchEx(
     std::vector<SegmentedRegionInfo>& segRegionInfoList);
 
 void CreateDirectory(const std::string& strFolderPath);
-std::vector<std::string> Split(const std::string& s, const std::string& delim);
-std::vector<std::string> Split(const std::string& s, char delim);
 
 void ConvertColorToGray(cv::Mat& img);
 unsigned char* ConvertCVMATtoUCHAR(const cv::Mat& img, const int& nH = -1,
