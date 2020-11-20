@@ -77,6 +77,10 @@ class Context {
 std::vector<std::string> split(const std::string& s, const std::string& delim);
 void create_dir(const std::string& dir);
 
+// image.cpp
+
+cv::Mat histogram(cv::Mat image);
+
 }  // namespace gazosan
 
 // pixel connectivity

@@ -152,37 +152,20 @@ int ImgSegMain(int argc, const char** argv) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-int ImgSeg00(const std::string& strOldImgFile,
-             const std::string& strNewImgFile) {
-  cv::Mat clrOldImg = cv::imread(strOldImgFile, cv::IMREAD_COLOR);
-  cv::Mat clrNewImg = cv::imread(strNewImgFile, cv::IMREAD_COLOR);
-  if (clrOldImg.data == nullptr || clrNewImg.data == nullptr) {
+int ImgSeg00(const std::string& old_img_file, const std::string& new_img_file) {
+  cv::Mat bgr_old_img = cv::imread(old_img_file, cv::IMREAD_COLOR);
+  cv::Mat bgr_new_img = cv::imread(new_img_file, cv::IMREAD_COLOR);
+  if (bgr_old_img.data == nullptr || bgr_new_img.data == nullptr) {
     return -2;
   }
 
-  cv::Mat hsvOldImg, hsvNewImg;
-  cv::cvtColor(clrOldImg, hsvOldImg, cv::COLOR_BGR2HSV);
-  cv::cvtColor(clrNewImg, hsvNewImg, cv::COLOR_BGR2HSV);
+  cv::Mat hist_old = gazosan::histogram(bgr_old_img);
+  cv::Mat hist_new = gazosan::histogram(bgr_new_img);
 
-  int nHistSize[] = {256, 256};
-  float fHRanges[] = {0, 180};
-  float fSRanges[] = {0, 256};
-  const float* pRanges[] = {fHRanges, fSRanges};
+  double diff = cv::compareHist(hist_old, hist_new, 1);
+  std::clog << " Compare Old to New : " << diff << std::endl;
 
-  int nChannels[] = {0, 1};
-
-  cv::Mat histOld, histNew;
-  cv::calcHist(&hsvOldImg, 1, nChannels, cv::Mat(), histOld, 2, nHistSize,
-               pRanges, true, false);
-  cv::normalize(histOld, histOld, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
-  cv::calcHist(&hsvNewImg, 1, nChannels, cv::Mat(), histNew, 2, nHistSize,
-               pRanges, true, false);
-  cv::normalize(histNew, histNew, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
-
-  double dOldToNew = cv::compareHist(histOld, histNew, 1);
-  std::clog << " Compare Old to New : " << dOldToNew << std::endl;
-
-  if (dOldToNew <= 0.00001) {
+  if (diff <= 0.00001) {
     return -1;
   }
   return 0;
