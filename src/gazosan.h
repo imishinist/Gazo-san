@@ -15,8 +15,10 @@
 
 #include "cxxopts.hpp"  // for option phrase
 
-// time.cpp
 namespace gazosan {
+
+// time.cpp
+
 enum TimeFormat {
   YYYYMMDD = 1,
   HHMMSS = 2,
@@ -73,6 +75,7 @@ class Context {
 // util.cpp
 
 std::vector<std::string> split(const std::string& s, const std::string& delim);
+void create_dir(const std::string& dir);
 
 }  // namespace gazosan
 
@@ -123,8 +126,6 @@ void ExecuteTemplateMatchEx(
     const std::string& strImgFile,
     const std::vector<std::string>& strPartFileList, cv::Mat& clrImg,
     std::vector<SegmentedRegionInfo>& segRegionInfoList);
-
-void CreateDirectory(const std::string& strFolderPath);
 
 void ConvertColorToGray(cv::Mat& img);
 unsigned char* ConvertCVMATtoUCHAR(const cv::Mat& img, const int& nH = -1,

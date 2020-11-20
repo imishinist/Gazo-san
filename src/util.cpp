@@ -2,6 +2,7 @@
 
 namespace gazosan {
 
+// public
 std::vector<std::string> split(const std::string& str,
                                const std::string& delim) {
   int first = 0;
@@ -23,6 +24,19 @@ std::vector<std::string> split(const std::string& str,
   }
 
   return result;
+}
+
+// public
+void create_dir(const std::string& dir) {
+  std::string str;
+  for (const auto& d : gazosan::split(dir, "/")) {
+    if (d == "." || d == "..") {
+      continue;
+    }
+
+    str += d + "/";
+    mkdir(str.c_str(), S_IRWXU);
+  }
 }
 
 }  // namespace gazosan

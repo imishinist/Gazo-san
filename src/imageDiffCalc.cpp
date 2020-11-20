@@ -115,7 +115,7 @@ int ImgSegMain(int argc, const char** argv) {
   {
     // create new folder under temporary folder, and parts division
     std::string strOutputFolder = "/tmp/image_diff_temp/new/";
-    CreateDirectory(strOutputFolder);
+    gazosan::create_dir(strOutputFolder);
     g_nPartFileNo = 1;
     ImgSeg01(context, strNewFile, strOutputFolder);
     g_strNewPartFileList = g_strFileList;
@@ -123,7 +123,7 @@ int ImgSegMain(int argc, const char** argv) {
 
     // create old folder under temporary folder, and parts division
     strOutputFolder = "/tmp/image_diff_temp/old/";
-    CreateDirectory(strOutputFolder);
+    gazosan::create_dir(strOutputFolder);
     g_nPartFileNo = 1;
     ImgSeg01(context, strOldFile, strOutputFolder);
     g_strOldPartFileList = g_strFileList;
@@ -656,21 +656,6 @@ void ExecuteTemplateMatchEx(
   }  // for(i)
 
   clrImg = curClrImg;
-}
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-void CreateDirectory(const std::string& strFolderPath) {
-  std::vector<std::string> strFolderList = gazosan::split(strFolderPath, "/");
-
-  std::string str;
-  for (const auto& strFolder : strFolderList) {
-    str += strFolder + "/";
-    if (strFolder == "." || strFolder == "..") {
-      continue;
-    }
-    mkdir(str.c_str(), S_IRWXU);
-  }
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
