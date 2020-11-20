@@ -5,8 +5,6 @@ namespace gazosan {
 // private
 std::string format_string(const TimeFormat& format_enum) {
   switch (format_enum) {
-    case TimeFormat::YYYYMMDDHHMMSS:
-      return "%Y%m%d%H%M%S";
     case TimeFormat::YYYYMMDD:
       return "%Y%m%d";
     case TimeFormat::HHMMSS:

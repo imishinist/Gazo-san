@@ -17,9 +17,8 @@
 // time.cpp
 namespace gazosan {
 enum TimeFormat {
-  YYYYMMDDHHMMSS = 1,
-  YYYYMMDD = 2,
-  HHMMSS = 3,
+  YYYYMMDD = 1,
+  HHMMSS = 2,
 };
 
 std::chrono::system_clock::time_point now();
