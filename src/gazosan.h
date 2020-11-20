@@ -10,6 +10,7 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/highgui/highgui.hpp>  // for highgui module
 #include <opencv2/imgproc/imgproc.hpp>
+#include <utility>
 #include <vector>  // for std::vector
 
 #include "cxxopts.hpp"  // for option phrase
@@ -24,6 +25,51 @@ enum TimeFormat {
 std::chrono::system_clock::time_point now();
 std::string format_date(const std::chrono::system_clock::time_point& now,
                         const TimeFormat& format_enum);
+
+class Context {
+ private:
+  std::string func_name;
+  int step_number;
+  std::string step_name;
+
+  inline void message(const std::string& phase) {
+    using namespace gazosan;
+    std::string now_time = format_date(now(), TimeFormat::HHMMSS);
+
+    // #{func_name} : Step#{step_number}. #{step_name} --END ( 041500 )--
+    std::clog << this->func_name << " : "
+              << "Step" << this->step_number << ". " << this->step_name << " --"
+              << phase << "( " << now_time << " )--" << std::endl;
+  }
+
+ public:
+  Context() : func_name(), step_number(), step_name() {}
+
+  Context(std::string func_name, int step_number, std::string step_name)
+      : func_name(std::move(func_name)),
+        step_number(step_number),
+        step_name(std::move(step_name)) {}
+
+  void reset(std::string _func_name) {
+    this->func_name = std::move(_func_name);
+    this->step_name = "";
+    this->step_number = 0;
+  }
+
+  void set_step(std::string _step_name) {
+    this->step_name = std::move(_step_name);
+    this->step_number++;
+  }
+
+  inline void start_message() { this->message("START"); }
+
+  inline void end_message() { this->message("END"); }
+
+  inline void error_message() const {
+    std::clog << " -> Error : Step" << this->step_number << std::endl;
+  }
+};
+
 }  // namespace gazosan
 
 // pixel connectivity
@@ -44,14 +90,17 @@ struct SegmentedRegionInfo {
 int ImgSegMain(int argc, const char** argv);
 int ImgSeg00(const std::string& strOldImgFile,
              const std::string& strNewImgFile);
-void ImgSeg01(const std::string& strImgFile,
+void ImgSeg01(std::shared_ptr<gazosan::Context> context,
+              const std::string& strImgFile,
               const std::string& strOutputFolder);
-void ImgSeg02(const std::string& strOldFile,
+void ImgSeg02(std::shared_ptr<gazosan::Context> context,
+              const std::string& strOldFile,
               const std::vector<std::string>& strOldPartFileList,
               const std::string& strNewFile,
               const std::vector<std::string>& strNewPartFileList,
               const std::string& strOutputFolder);
-void ImgSeg03(const std::string& strOldFile,
+void ImgSeg03(std::shared_ptr<gazosan::Context> context,
+              const std::string& strOldFile,
               std::map<int, std::vector<std::string> > strPartFileListMap,
               const std::string& strOutputFolder);
 
@@ -93,22 +142,3 @@ std::string GetPNGFile(const int& nNum, const std::string& strOutputFolder);
 bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
                         const unsigned char* pSrcImg,
                         std::vector<std::vector<PixelConnectivity*>*>& solid);
-
-inline void SetProcessStartMsg(const std::string& strFuncName,
-                               const int& nStepNo,
-                               const std::string& strStepName) {
-  using namespace gazosan;
-  std::string strHHMMSS = format_date(now(), TimeFormat::HHMMSS);
-  std::clog << strFuncName << " : Step" << nStepNo << ". " << strStepName
-            << " --START ( " << strHHMMSS << " )--" << std::endl;
-}
-inline void SetProcessEndMsg(const std::string& strFuncName, const int& nStepNo,
-                             const std::string& strStepName) {
-  using namespace gazosan;
-  std::string strHHMMSS = format_date(now(), TimeFormat::HHMMSS);
-  std::clog << strFuncName << " : Step" << nStepNo << ". " << strStepName
-            << " --END ( " << strHHMMSS << " )--" << std::endl;
-}
-inline void SetProcessErrorMsg(const int& nStepNo) {
-  std::clog << " -> Error : Step" << nStepNo << std::endl;
-}

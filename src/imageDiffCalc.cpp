@@ -110,13 +110,14 @@ int ImgSegMain(int argc, const char** argv) {
     }
   }
 
+  auto context = std::make_shared<gazosan::Context>();
   // ImgSeg01
   {
     // create new folder under temporary folder, and parts division
     std::string strOutputFolder = "/tmp/image_diff_temp/new/";
     CreateDirectory(strOutputFolder);
     g_nPartFileNo = 1;
-    ImgSeg01(strNewFile, strOutputFolder);
+    ImgSeg01(context, strNewFile, strOutputFolder);
     g_strNewPartFileList = g_strFileList;
     g_strFileList.clear();
 
@@ -124,7 +125,7 @@ int ImgSegMain(int argc, const char** argv) {
     strOutputFolder = "/tmp/image_diff_temp/old/";
     CreateDirectory(strOutputFolder);
     g_nPartFileNo = 1;
-    ImgSeg01(strOldFile, strOutputFolder);
+    ImgSeg01(context, strOldFile, strOutputFolder);
     g_strOldPartFileList = g_strFileList;
     g_strFileList.clear();
   }
@@ -132,14 +133,14 @@ int ImgSegMain(int argc, const char** argv) {
   // ImgSeg02
   {
     std::string strOutputFolder = "./";
-    ImgSeg02(strOldFile, g_strOldPartFileList, strNewFile, g_strNewPartFileList,
-             strOutputFolder);
+    ImgSeg02(context, strOldFile, g_strOldPartFileList, strNewFile,
+             g_strNewPartFileList, strOutputFolder);
   }
 
   // ImgSeg03
   {
     std::string strOutputFolder = "./";
-    ImgSeg03(strOldFile, g_strFileDiffInfoListMap, strOutputFolder);
+    ImgSeg03(context, strOldFile, g_strFileDiffInfoListMap, strOutputFolder);
     if (system("exec rm -r /tmp/image_diff_temp") != 0) {
       std::cerr << "Fail in delete temp directoty." << std::endl;
       return -1;
@@ -189,53 +190,48 @@ int ImgSeg00(const std::string& strOldImgFile,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ImgSeg01(const std::string& strImgFile,
+void ImgSeg01(std::shared_ptr<gazosan::Context> context,
+              const std::string& strImgFile,
               const std::string& strOutputFolder) {
-  std::string strFuncName = "ImgSeg01";
-  int nStepNo = 0;
-  std::string strStepName;
+  context->reset("ImgSeg01");
 
   // Step1 : load image
-  ++nStepNo;
-  strStepName = "Load image";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Load image");
+  context->start_message();
   cv::Mat clrImg = cv::imread(strImgFile, cv::IMREAD_COLOR);
   if (clrImg.data == nullptr) {
-    SetProcessErrorMsg(nStepNo);
+    context->error_message();
     return;
   }
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step1 : load image
 
   // Step2 : color -> gray -> binary
-  ++nStepNo;
-  strStepName = "Transform image color -> gray -> binary";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Transform image color -> gray -> binary");
+  context->start_message();
   cv::Mat gryImg;
   cv::cvtColor(clrImg, gryImg, cv::COLOR_BGR2GRAY);
 
   cv::Mat binImg;
   cv::threshold(gryImg, binImg, 200, 255, cv::THRESH_BINARY);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step2 : color -> gray -> binary
 
   // Step 3 : morphology process
-  ++nStepNo;
-  strStepName = "Morphology process";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Morphology process");
+  context->start_message();
   int nIter = 7;
   cv::Mat grdImg;
   // cv::Mat kernel(3, 3, CV_8U, cv::Scalar(1)); // =cv::MORPH_RECT
   cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
   cv::morphologyEx(binImg, grdImg, cv::MORPH_GRADIENT, kernel,
                    cv::Point(-1, -1), nIter);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 3 : morphology process
 
   // Step 4 : find contours and auto labeling
-  ++nStepNo;
-  strStepName = "Find contours and Auto labeling";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Find contours and Auto labeling");
+  context->start_message();
   int compCount = 0;
   std::vector<std::vector<cv::Point> > contours;
   std::vector<cv::Vec4i> hierarchy;
@@ -243,7 +239,7 @@ void ImgSeg01(const std::string& strImgFile,
   cv::findContours(grdImg, contours, hierarchy, cv::RETR_CCOMP,
                    cv::CHAIN_APPROX_SIMPLE);
   if (contours.empty()) {
-    SetProcessErrorMsg(nStepNo);
+    context->error_message();
     return;
   }
   cv::Mat markers = cv::Mat::zeros(grdImg.rows, grdImg.cols, CV_32SC1);
@@ -253,21 +249,19 @@ void ImgSeg01(const std::string& strImgFile,
                      8, hierarchy, INT_MAX);
     markers = markers + 1;
   }
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 4 : find contours and auto labeling
 
   // Step 5 : watershed
-  ++nStepNo;
-  strStepName = "Watershed process";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Watershed process");
+  context->start_message();
   cv::watershed(clrImg, markers);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 5 : watershed
 
   // Step 6 : change color and create watershed png image
-  ++nStepNo;
-  strStepName = "Change color and Create Watershed png image";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Change color and Create Watershed png image");
+  context->start_message();
   cv::Mat wsdImg(markers.size(), CV_8UC3);
   for (int y = 0; y < markers.rows; ++y) {
     for (int x = 0; x < markers.cols; ++x) {
@@ -282,13 +276,12 @@ void ImgSeg01(const std::string& strImgFile,
     }
   }
   CreatePNGfromCVMAT(0, wsdImg, strOutputFolder);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 6 : change color and allocate memory for watershed png
 
   // Step 7 : grouping and create png for each parts
-  ++nStepNo;
-  strStepName = "Grouping and Create png for each parts";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Grouping and Create png for each parts");
+  context->start_message();
   int nH = wsdImg.rows;
   int nW = wsdImg.cols;
   unsigned char* pSrcImg = ConvertCVMATtoUCHAR(wsdImg);
@@ -329,7 +322,7 @@ void ImgSeg01(const std::string& strImgFile,
     delete[] pDstImg;
     pDstImg = nullptr;
   }  // for(i)
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 7 : grouping and create png for each parts
 
   std::clog << "\n" << std::endl;
@@ -337,32 +330,29 @@ void ImgSeg01(const std::string& strImgFile,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ImgSeg02(const std::string& strOldFile,
+void ImgSeg02(std::shared_ptr<gazosan::Context> context,
+              const std::string& strOldFile,
               const std::vector<std::string>& strOldPartFileList,
               const std::string& strNewFile,
               const std::vector<std::string>& strNewPartFileList,
               const std::string& strOutputFolder) {
-  std::string strFuncName = "ImgSeg02";
-  int nStepNo = 0;
-  std::string strStepName;
+  context->reset("ImgSeg02");
 
   /* old <-> new */
   // Step1 : feature detector and matching between base and target image
-  ++nStepNo;
-  strStepName = "Feature detector and matching between old and new image";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Feature detector and matching between old and new image");
+  context->start_message();
   std::clog << "  old (" << strOldPartFileList.size() << ")"
             << " <-> new (" << strNewPartFileList.size() << ")" << std::endl;
   ExecuteFeatureDetectorAndMatching(strOldPartFileList, strNewPartFileList,
                                     g_strFileDiffInfoListMap);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step1 : feature detector and matching between base and target image
 
   if (g_bCreateChangeImg) {
     // Step2 : create base image with difference part frame
-    ++nStepNo;
-    strStepName = "Create base image with difference part frame";
-    SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+    context->set_step("Create base image with difference part frame");
+    context->start_message();
     std::clog << "  old difference parts ("
               << g_strFileDiffInfoListMap[1].size() << ")" << std::endl;
     cv::Mat clrOldImg;
@@ -390,7 +380,7 @@ void ImgSeg02(const std::string& strOldFile,
           info.clrFrame, 2);
     }
     CreatePNGfromCVMAT(9000, clrNewImg, strOutputFolder);
-    SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+    context->end_message();
     // Step2 : Create base image with difference part frame
   }
 
@@ -399,29 +389,26 @@ void ImgSeg02(const std::string& strOldFile,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ImgSeg03(const std::string& strOldFile,
+void ImgSeg03(std::shared_ptr<gazosan::Context> context,
+              const std::string& strOldFile,
               std::map<int, std::vector<std::string> > strPartFileListMap,
               const std::string& strOutputFolder) {
-  std::string strFuncName = "ImgSeg03";
-  int nStepNo = 0;
-  std::string strStepName;
+  context->reset("ImgSeg03");
 
   // Step 1 : check template match for old file and new->old same part files
-  ++nStepNo;
-  strStepName =
-      "Check template match for old file and new->old same part files";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step(
+      "Check template match for old file and new->old same part files");
+  context->start_message();
   cv::Mat oldClrImg;
   std::vector<SegmentedRegionInfo> newSegRegionInfoList;
   ExecuteTemplateMatchEx(strOldFile, strPartFileListMap[2], oldClrImg,
                          newSegRegionInfoList);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 1 : check template match for old file and new->old same part files
 
   // Step 2 : draw information in old file
-  ++nStepNo;
-  strStepName = "Draw information in old file";
-  SetProcessStartMsg(strFuncName, nStepNo, strStepName);
+  context->set_step("Draw information in old file");
+  context->start_message();
   cv::Mat oldImg = oldClrImg;
   ConvertColorToGray(oldImg);
   for (auto info : newSegRegionInfoList) {
@@ -438,7 +425,7 @@ void ImgSeg03(const std::string& strOldFile,
     }
   }
   CreatePNGfromCVMAT(10000, oldImg, strOutputFolder);
-  SetProcessEndMsg(strFuncName, nStepNo, strStepName);
+  context->end_message();
   // Step 2 : draw information in old file
 
   std::clog << "\n" << std::endl;
