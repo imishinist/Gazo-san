@@ -1,22 +1,17 @@
 #include <iostream>
 
-int ImgSegMain(int argc, const char** argv);
-bool GetTimeHHMMSS(tm* pTM, std::string& strHHMMSS);
+#include "gazosan.h"
 
 int main(int argc, const char** argv) {
-  std::string strHHMMSS_Start;
-  GetTimeHHMMSS(nullptr, strHHMMSS_Start);
+  using namespace gazosan;
+  auto start = format_date(gazosan::now(), TimeFormat::HHMMSS);
 
   std::cout << "Start detection" << std::endl;
-
   // ImgSeg
   ImgSegMain(argc, argv);
 
-  std::string strHHMMSS_End;
-  GetTimeHHMMSS(nullptr, strHHMMSS_End);
-
-  std::cout << "Process time : " << strHHMMSS_Start << " - " << strHHMMSS_End
-            << std::endl;
+  auto end = format_date(gazosan::now(), TimeFormat::HHMMSS);
+  std::cout << "Process time : " << start << " - " << end << std::endl;
 
   return 0;
 }

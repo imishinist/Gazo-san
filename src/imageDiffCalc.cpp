@@ -26,17 +26,7 @@
 // the use of this software, even if advised of the possibility of such damage.
 ///////////////////////////////////////////////////////////////////////////
 
-#include <sys/stat.h>  //for mkdir for Linux
-
-#include <ctime>     // for tm
-#include <iostream>  // for std::string
-#include <map>
-#include <opencv2/features2d.hpp>
-#include <opencv2/highgui/highgui.hpp>  // for highgui module
-#include <opencv2/imgproc/imgproc.hpp>
-#include <vector>  // for std::vector
-
-#include "cxxopts.hpp"  // for option phrase
+#include "gazosan.h"
 
 ////////// Global variables //////////
 // old/new part file list (Relative Path)
@@ -51,103 +41,12 @@ std::vector<std::string> g_strFileList;
 // new, [2]/[3] : same/add image between new and old)
 std::map<int, std::vector<std::string> > g_strFileDiffInfoListMap;
 
-// pixel connectivity
-struct PixelConnectivity {
-  int nIdx{};
-  std::vector<int> nNeighborIdxList;
-};
-// segmented region information
-struct SegmentedRegionInfo {
-  cv::Point ptOrigin;
-  int nW{};
-  int nH{};
-  cv::Scalar clrFrame;
-  std::vector<cv::Point> ptPixList;
-};
 // part frame color list for rectangle
 std::vector<cv::Vec3b> g_clrPartFrameList;
 unsigned int g_nClrPartFrameIndex;
 
 int g_nPartFileNo = 0;
 bool g_bCreateChangeImg = false;
-
-////////// Global function //////////
-int ImgSegMain(int argc, const char** argv);
-int ImgSeg00(const std::string& strOldImgFile,
-             const std::string& strNewImgFile);
-void ImgSeg01(const std::string& strImgFile,
-              const std::string& strOutputFolder);
-void ImgSeg02(const std::string& strOldFile,
-              const std::vector<std::string>& strOldPartFileList,
-              const std::string& strNewFile,
-              const std::vector<std::string>& strNewPartFileList,
-              const std::string& strOutputFolder);
-void ImgSeg03(const std::string& strOldFile,
-              std::map<int, std::vector<std::string> > strPartFileListMap,
-              const std::string& strOutputFolder);
-
-void ExecuteFeatureDetectorAndMatching(
-    const std::vector<std::string>& strOldPartFileList,
-    const std::vector<std::string>& strNewPartFileList,
-    std::map<int, std::vector<std::string> >& strMap);
-void ComputeKeypointAndDescriptor(
-    const std::vector<std::string>& strPartFileList,
-    std::map<std::string, cv::Mat>& strMap);
-void ExecuteTemplateMatch(const std::string& strImgFile,
-                          const std::vector<std::string>& strPartFileList,
-                          cv::Mat& clrImg,
-                          std::vector<SegmentedRegionInfo>& segRegionInfoList);
-void ExecuteTemplateMatchEx(
-    const std::string& strImgFile,
-    const std::vector<std::string>& strPartFileList, cv::Mat& clrImg,
-    std::vector<SegmentedRegionInfo>& segRegionInfoList);
-
-void CreateDirectory(const std::string& strFolderPath);
-std::vector<std::string> Split(const std::string& s, const std::string& delim);
-std::vector<std::string> Split(const std::string& s, char delim);
-
-void ConvertColorToGray(cv::Mat& img);
-unsigned char* ConvertCVMATtoUCHAR(const cv::Mat& img, const int& nH = -1,
-                                   const int& nW = -1);
-
-void CreatePNGfromCVMAT(const int& nNum, const cv::Mat& img,
-                        const std::string& strOutputFolder);
-void CreatePNGfromUCHAR(const int& nNum, const int& nW, const int& nH,
-                        unsigned char* pImg,
-                        const std::string& strOutputFolder);
-void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
-               const unsigned char* pImg);
-void ConvertBMPtoPNG(const std::string& strBMPFile,
-                     const std::string& strPNGFile);
-std::string GetPNGFile(const int& nNum, const std::string& strOutputFolder);
-
-bool GetTimeYYYYMMDDHHMMSS(tm* pTM, std::string& strYYYYMMDD,
-                           std::string& strHHMMSS);
-bool GetTimeYYYYMMDD(tm* pTM, std::string& strYYYYMMDD);
-bool GetTimeHHMMSS(tm* pTM, std::string& strHHMMSS);
-
-bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
-                        const unsigned char* pSrcImg,
-                        std::vector<std::vector<PixelConnectivity*>*>& solid);
-
-inline void SetProcessStartMsg(const std::string& strFuncName,
-                               const int& nStepNo,
-                               const std::string& strStepName) {
-  std::string strHHMMSS;
-  GetTimeHHMMSS(nullptr, strHHMMSS);
-  std::clog << strFuncName << " : Step" << nStepNo << ". " << strStepName
-            << " --START ( " << strHHMMSS << " )--" << std::endl;
-}
-inline void SetProcessEndMsg(const std::string& strFuncName, const int& nStepNo,
-                             const std::string& strStepName) {
-  std::string strHHMMSS;
-  GetTimeHHMMSS(nullptr, strHHMMSS);
-  std::clog << strFuncName << " : Step" << nStepNo << ". " << strStepName
-            << " --END ( " << strHHMMSS << " )--" << std::endl;
-}
-inline void SetProcessErrorMsg(const int& nStepNo) {
-  std::clog << " -> Error : Step" << nStepNo << std::endl;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 int ImgSegMain(int argc, const char** argv) {
@@ -873,8 +772,10 @@ unsigned char* ConvertCVMATtoUCHAR(const cv::Mat& img, const int& nH /*=-1*/,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string GetPNGFile(const int& nNum, const std::string& strOutputFolder) {
-  std::string strYYYYMMDD, strHHMMSS;
-  GetTimeYYYYMMDDHHMMSS(nullptr, strYYYYMMDD, strHHMMSS);
+  using namespace gazosan;
+  auto now_time = now();
+  std::string strYYYYMMDD = format_date(now_time, TimeFormat::YYYYMMDD),
+              strHHMMSS = format_date(now_time, TimeFormat::HHMMSS);
 
   int nFileNo = nNum;
 
@@ -1061,62 +962,14 @@ void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool GetTimeYYYYMMDDHHMMSS(tm* pTM, std::string& strYYYYMMDD,
-                           std::string& strHHMMSS) {
-  if (pTM == nullptr) {
-    time_t now = time(nullptr);
-    pTM = localtime(&now);
-  }
-
-  return GetTimeYYYYMMDD(pTM, strYYYYMMDD) && GetTimeHHMMSS(pTM, strHHMMSS);
-}
-bool GetTimeYYYYMMDD(tm* pTM, std::string& strYYYYMMDD) {
-  if (pTM == nullptr) {
-    time_t now = time(nullptr);
-    pTM = localtime(&now);
-  }
-
-  std::ostringstream str[3];
-  str[0] << pTM->tm_year + 1900;
-  str[1] << pTM->tm_mon + 1;
-  str[2] << pTM->tm_mday;
-  bool bIsOneDigit[3] = {false, ((0 <= pTM->tm_mon && pTM->tm_mon <= 9)),
-                         ((0 <= pTM->tm_mday && pTM->tm_mday <= 9))};
-  for (int i = 0; i < 3; ++i) {
-    strYYYYMMDD += bIsOneDigit[i] ? '0' + str[i].str() : str[i].str();
-  }
-
-  return !strYYYYMMDD.empty();
-}
-bool GetTimeHHMMSS(tm* pTM, std::string& strHHMMSS) {
-  if (pTM == nullptr) {
-    time_t now = time(nullptr);
-    pTM = localtime(&now);
-  }
-
-  std::ostringstream str[3];
-  str[0] << pTM->tm_hour;
-  str[1] << pTM->tm_min;
-  str[2] << pTM->tm_sec;
-  bool bIsOneDigit[3] = {((0 <= pTM->tm_hour && pTM->tm_hour <= 9)),
-                         ((0 <= pTM->tm_min && pTM->tm_min <= 9)),
-                         ((0 <= pTM->tm_sec && pTM->tm_sec <= 9))};
-  for (int i = 0; i < 3; ++i) {
-    strHHMMSS += bIsOneDigit[i] ? '0' + str[i].str() : str[i].str();
-  }
-
-  return !strHHMMSS.empty();
-}
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
 bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
                         const unsigned char* pSrcImg,
                         std::vector<std::vector<PixelConnectivity*>*>& solid) {
   {
-    std::string strHHMMSS;
-    GetTimeHHMMSS(nullptr, strHHMMSS);
-    std::clog << " -> Grouping Start : " << strHHMMSS.c_str() << std::endl;
+    using namespace gazosan;
+    std::string strHHMMSS = format_date(now(), TimeFormat::HHMMSS);
+
+    std::clog << " -> Grouping Start : " << strHHMMSS << std::endl;
   }
   const int Xs = 0;
   const int Ys = 0;
@@ -1217,9 +1070,9 @@ bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
     }
   }
   {
-    std::string strHHMMSS;
-    GetTimeHHMMSS(nullptr, strHHMMSS);
-    std::clog << " -> Grouping End : " << strHHMMSS.c_str() << std::endl;
+    using namespace gazosan;
+    std::string strHHMMSS = format_date(now(), TimeFormat::HHMMSS);
+    std::clog << " -> Grouping End : " << strHHMMSS << std::endl;
   }
 
   std::clog << "*** Part count after grouping : " << solid.size() << std::endl;
