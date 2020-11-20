@@ -27,8 +27,8 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include <sys/stat.h>  //for mkdir for Linux
-#include <time.h>      // for tm
 
+#include <ctime>     // for tm
 #include <iostream>  // for std::string
 #include <map>
 #include <opencv2/features2d.hpp>
@@ -51,16 +51,16 @@ std::vector<std::string> g_strFileList;
 // new, [2]/[3] : same/add image between new and old)
 std::map<int, std::vector<std::string> > g_strFileDiffInfoListMap;
 
-// pixel connectibity
+// pixel connectivity
 struct PixelConnectivity {
-  int nIdx;
+  int nIdx{};
   std::vector<int> nNeighborIdxList;
 };
 // segmented region information
 struct SegmentedRegionInfo {
   cv::Point ptOrigin;
-  int nW;
-  int nH;
+  int nW{};
+  int nH{};
   cv::Scalar clrFrame;
   std::vector<cv::Point> ptPixList;
 };
@@ -116,7 +116,7 @@ void CreatePNGfromUCHAR(const int& nNum, const int& nW, const int& nH,
                         unsigned char* pImg,
                         const std::string& strOutputFolder);
 void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
-               unsigned char* pImg);
+               const unsigned char* pImg);
 void ConvertBMPtoPNG(const std::string& strBMPFile,
                      const std::string& strPNGFile);
 std::string GetPNGFile(const int& nNum, const std::string& strOutputFolder);
@@ -127,21 +127,21 @@ bool GetTimeYYYYMMDD(tm* pTM, std::string& strYYYYMMDD);
 bool GetTimeHHMMSS(tm* pTM, std::string& strHHMMSS);
 
 bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
-                        unsigned char* pSrcImg,
+                        const unsigned char* pSrcImg,
                         std::vector<std::vector<PixelConnectivity*>*>& solid);
 
 inline void SetProcessStartMsg(const std::string& strFuncName,
                                const int& nStepNo,
                                const std::string& strStepName) {
   std::string strHHMMSS;
-  GetTimeHHMMSS(NULL, strHHMMSS);
+  GetTimeHHMMSS(nullptr, strHHMMSS);
   std::clog << strFuncName << " : Step" << nStepNo << ". " << strStepName
             << " --START ( " << strHHMMSS << " )--" << std::endl;
 }
 inline void SetProcessEndMsg(const std::string& strFuncName, const int& nStepNo,
                              const std::string& strStepName) {
   std::string strHHMMSS;
-  GetTimeHHMMSS(NULL, strHHMMSS);
+  GetTimeHHMMSS(nullptr, strHHMMSS);
   std::clog << strFuncName << " : Step" << nStepNo << ". " << strStepName
             << " --END ( " << strHHMMSS << " )--" << std::endl;
 }
@@ -256,7 +256,7 @@ int ImgSeg00(const std::string& strOldImgFile,
              const std::string& strNewImgFile) {
   cv::Mat clrOldImg = cv::imread(strOldImgFile, cv::IMREAD_COLOR);
   cv::Mat clrNewImg = cv::imread(strNewImgFile, cv::IMREAD_COLOR);
-  if (clrOldImg.data == NULL || clrNewImg.data == NULL) {
+  if (clrOldImg.data == nullptr || clrNewImg.data == nullptr) {
     return -2;
   }
 
@@ -294,14 +294,14 @@ void ImgSeg01(const std::string& strImgFile,
               const std::string& strOutputFolder) {
   std::string strFuncName = "ImgSeg01";
   int nStepNo = 0;
-  std::string strStepName = "";
+  std::string strStepName;
 
   // Step1 : load image
   ++nStepNo;
   strStepName = "Load image";
   SetProcessStartMsg(strFuncName, nStepNo, strStepName);
   cv::Mat clrImg = cv::imread(strImgFile, cv::IMREAD_COLOR);
-  if (clrImg.data == NULL) {
+  if (clrImg.data == nullptr) {
     SetProcessErrorMsg(nStepNo);
     return;
   }
@@ -343,7 +343,7 @@ void ImgSeg01(const std::string& strImgFile,
   grdImg.convertTo(grdImg, CV_32SC1, 1.0);
   cv::findContours(grdImg, contours, hierarchy, cv::RETR_CCOMP,
                    cv::CHAIN_APPROX_SIMPLE);
-  if (contours.empty() == true) {
+  if (contours.empty()) {
     SetProcessErrorMsg(nStepNo);
     return;
   }
@@ -396,7 +396,7 @@ void ImgSeg01(const std::string& strImgFile,
   std::vector<std::vector<PixelConnectivity*>*> solid;
   GetGroupedDataTest(nW, nH, pSrcImg, solid);
   delete[] pSrcImg;
-  pSrcImg = NULL;
+  pSrcImg = nullptr;
 
   for (unsigned int i = 0; i < solid.size(); ++i) {
     std::vector<PixelConnectivity*>* pShell = solid.at(i);
@@ -405,8 +405,7 @@ void ImgSeg01(const std::string& strImgFile,
     int nMinY = 2 * nH;
     int nMaxX = -1;
     int nMaxY = -1;
-    for (unsigned int j = 0; j < pShell->size(); ++j) {
-      PixelConnectivity* pPix = pShell->at(j);
+    for (auto pPix : *pShell) {
       int y = pPix->nIdx / nW;
       int x = pPix->nIdx % nW;
       if (x < nMinX) nMinX = x;
@@ -417,7 +416,7 @@ void ImgSeg01(const std::string& strImgFile,
 
     int w = nMaxX - nMinX + 1;
     int h = nMaxY - nMinY + 1;
-    unsigned char* pDstImg = new unsigned char[w * h * 3];
+    auto* pDstImg = new unsigned char[w * h * 3];
     for (int y = nMinY; y < nMinY + h; ++y) {
       int dstImgIdx = (y - nMinY) * w * 3;
       for (int x = nMinX; x < nMinX + w; ++x) {
@@ -429,7 +428,7 @@ void ImgSeg01(const std::string& strImgFile,
     }    // for(y)
     CreatePNGfromUCHAR(i + 1, w, h, pDstImg, strOutputFolder);
     delete[] pDstImg;
-    pDstImg = NULL;
+    pDstImg = nullptr;
   }  // for(i)
   SetProcessEndMsg(strFuncName, nStepNo, strStepName);
   // Step 7 : grouping and create png for each parts
@@ -446,7 +445,7 @@ void ImgSeg02(const std::string& strOldFile,
               const std::string& strOutputFolder) {
   std::string strFuncName = "ImgSeg02";
   int nStepNo = 0;
-  std::string strStepName = "";
+  std::string strStepName;
 
   /* old <-> new */
   // Step1 : feature detector and matching between base and target image
@@ -460,7 +459,7 @@ void ImgSeg02(const std::string& strOldFile,
   SetProcessEndMsg(strFuncName, nStepNo, strStepName);
   // Step1 : feature detector and matching between base and target image
 
-  if (g_bCreateChangeImg == true) {
+  if (g_bCreateChangeImg) {
     // Step2 : create base image with difference part frame
     ++nStepNo;
     strStepName = "Create base image with difference part frame";
@@ -471,8 +470,7 @@ void ImgSeg02(const std::string& strOldFile,
     std::vector<SegmentedRegionInfo> oldSegRegionInfoList;
     ExecuteTemplateMatch(strOldFile, g_strFileDiffInfoListMap[1], clrOldImg,
                          oldSegRegionInfoList);
-    for (unsigned int i = 0; i < oldSegRegionInfoList.size(); ++i) {
-      SegmentedRegionInfo info = oldSegRegionInfoList.at(i);
+    for (const auto& info : oldSegRegionInfoList) {
       cv::rectangle(
           clrOldImg, info.ptOrigin,
           cv::Point(info.ptOrigin.x + info.nW, info.ptOrigin.y + info.nH),
@@ -486,8 +484,7 @@ void ImgSeg02(const std::string& strOldFile,
     std::vector<SegmentedRegionInfo> newSegRegionInfoList;
     ExecuteTemplateMatch(strNewFile, g_strFileDiffInfoListMap[3], clrNewImg,
                          newSegRegionInfoList);
-    for (unsigned int i = 0; i < newSegRegionInfoList.size(); ++i) {
-      SegmentedRegionInfo info = newSegRegionInfoList.at(i);
+    for (const auto& info : newSegRegionInfoList) {
       cv::rectangle(
           clrNewImg, info.ptOrigin,
           cv::Point(info.ptOrigin.x + info.nW, info.ptOrigin.y + info.nH),
@@ -508,7 +505,7 @@ void ImgSeg03(const std::string& strOldFile,
               const std::string& strOutputFolder) {
   std::string strFuncName = "ImgSeg03";
   int nStepNo = 0;
-  std::string strStepName = "";
+  std::string strStepName;
 
   // Step 1 : check template match for old file and new->old same part files
   ++nStepNo;
@@ -528,8 +525,7 @@ void ImgSeg03(const std::string& strOldFile,
   SetProcessStartMsg(strFuncName, nStepNo, strStepName);
   cv::Mat oldImg = oldClrImg;
   ConvertColorToGray(oldImg);
-  for (unsigned int i = 0; i < newSegRegionInfoList.size(); ++i) {
-    SegmentedRegionInfo info = newSegRegionInfoList.at(i);
+  for (auto info : newSegRegionInfoList) {
     cv::rectangle(
         oldImg, info.ptOrigin,
         cv::Point(info.ptOrigin.x + info.nW, info.ptOrigin.y + info.nH),
@@ -572,39 +568,36 @@ void ExecuteFeatureDetectorAndMatching(
   // old -> new
   {
     unsigned int i = 0;
-    for (std::map<std::string, cv::Mat>::iterator itrOld =
-             strOldPartDescriptorInfoMap.begin();
-         itrOld != strOldPartDescriptorInfoMap.end(); ++itrOld) {
+    for (auto& itrOld : strOldPartDescriptorInfoMap) {
       std::clog << "    Old No. " << ++i << " : " << std::flush;
       // std::string strOldPartFile = itrOld->first;
       // cv::Mat desOldPart = itrOld->second;
 
       bool bIsMatched = false;
-      if (itrOld->second.data == NULL) {
+      if (itrOld.second.data == nullptr) {
         std::clog << "key point size = 0." << std::endl;
       } else {
         std::clog << "" << std::endl;
 
         unsigned int j = 0;
-        for (std::map<std::string, cv::Mat>::iterator itrNew =
-                 strNewPartDescriptorInfoMap.begin();
+        for (auto itrNew = strNewPartDescriptorInfoMap.begin();
              itrNew != strNewPartDescriptorInfoMap.end(); ++itrNew) {
           std::clog << "     New No." << ++j << " : " << std::flush;
           // std::string strNewPartFile = itrNew->first;
           // cv::Mat desNewPart = itrNew->second;
 
           std::vector<cv::DMatch> matches;
-          if (itrOld->second.data && itrNew->second.data) {
-            matcher->match(itrOld->second, itrNew->second, matches);
+          if (itrOld.second.data && itrNew->second.data) {
+            matcher->match(itrOld.second, itrNew->second, matches);
             std::sort(matches.begin(),
                       matches.end());  // sorted by cv::DMatch::distance
           }
 
-          if (matches.size() > 0 &&
+          if (!matches.empty() &&
               matches[matches.size() / 2].distance <= 1.0f) {
             std::clog << "Match" << std::endl;
             bIsMatched = true;  // full or almost match
-            strMatchedPartFilesMap[itrNew->first] = itrOld->first;
+            strMatchedPartFilesMap[itrNew->first] = itrOld.first;
             strNewPartDescriptorInfoMap.erase(itrNew);
             break;
           } else {
@@ -613,10 +606,10 @@ void ExecuteFeatureDetectorAndMatching(
         }  // for(j)
       }
 
-      if (bIsMatched == true && g_bCreateChangeImg == true) {
-        strMap[0].push_back(itrOld->first);
+      if (bIsMatched && g_bCreateChangeImg) {
+        strMap[0].push_back(itrOld.first);
       } else {
-        strMap[1].push_back(itrOld->first);
+        strMap[1].push_back(itrOld.first);
       }
     }  // for(i)
   }
@@ -626,20 +619,19 @@ void ExecuteFeatureDetectorAndMatching(
     std::clog << "   Compute 'feature match' of new to old part" << std::endl;
     unsigned int j = 0;
     std::vector<std::string> strList = strNewPartFileList;
-    for (std::vector<std::string>::iterator itr = strList.begin();
-         itr != strList.end(); ++itr) {
+    for (auto& itr : strList) {
       std::clog << "    New No. " << ++j << " : " << std::flush;
 
-      if (strMatchedPartFilesMap.find(*itr) != strMatchedPartFilesMap.end()) {
+      if (strMatchedPartFilesMap.find(itr) != strMatchedPartFilesMap.end()) {
         std::clog << "Match" << std::endl;
-        strMap[2].push_back(*itr);
-      } else if (g_bCreateChangeImg == true) {
-        if (strNewPartDescriptorInfoMap.find(*itr)->second.data) {
+        strMap[2].push_back(itr);
+      } else if (g_bCreateChangeImg) {
+        if (strNewPartDescriptorInfoMap.find(itr)->second.data) {
           std::clog << "No Match" << std::endl;
         } else {
           std::clog << "key point size = 0." << std::endl;
         }
-        strMap[3].push_back(*itr);
+        strMap[3].push_back(itr);
       }
     }
   }
@@ -655,27 +647,26 @@ void ComputeKeypointAndDescriptor(
   cv::Ptr<cv::AKAZE> akaze = cv::AKAZE::create();
 
   unsigned int i = 0;
-  for (std::vector<std::string>::iterator itr = strCopiedPartFileList.begin();
-       itr != strCopiedPartFileList.end(); ++itr) {
+  for (auto& itr : strCopiedPartFileList) {
     std::clog << "    File No. " << ++i << " : " << std::flush;
 
     // std::string strBasePartFile = *itr;
-    cv::Mat gryImg = cv::imread(*itr, cv::IMREAD_GRAYSCALE);
-    if (gryImg.data == NULL) {
+    cv::Mat gryImg = cv::imread(itr, cv::IMREAD_GRAYSCALE);
+    if (gryImg.data == nullptr) {
       continue;
     }
 
     std::vector<cv::KeyPoint> kpList;
     akaze->detect(gryImg, kpList);
-    if (kpList.size() == 0) {
+    if (kpList.empty()) {
       std::clog << "key point size = 0." << std::endl;
-      strMap[*itr] = cv::Mat();
+      strMap[itr] = cv::Mat();
       continue;
     }
     cv::Mat descriptors;
     akaze->compute(gryImg, kpList, descriptors);
     descriptors.convertTo(descriptors, CV_32F);
-    strMap[*itr] = descriptors;
+    strMap[itr] = descriptors;
     std::clog << "OK" << std::endl;
   }
 }
@@ -690,11 +681,10 @@ void ExecuteTemplateMatch(const std::string& strImgFile,
   cv::Mat curClrImg, curGryImg;
   curClrImg = cv::imread(strImgFile, cv::IMREAD_COLOR);
   cv::cvtColor(curClrImg, curGryImg, cv::COLOR_BGR2GRAY);
-  for (unsigned int i = 0; i < strPartFileList.size(); ++i) {
+  for (const auto& strPartFile : strPartFileList) {
     // part image
-    std::string strPartFile = strPartFileList.at(i);
     cv::Mat partClrImg = cv::imread(strPartFile, cv::IMREAD_COLOR);
-    if (partClrImg.data == NULL) {
+    if (partClrImg.data == nullptr) {
       continue;
     }
     cv::Mat partGryImg;
@@ -705,7 +695,7 @@ void ExecuteTemplateMatch(const std::string& strImgFile,
     cv::Point ptMin;
     cv::Mat retImg;
     cv::matchTemplate(curGryImg, partGryImg, retImg, cv::TM_SQDIFF);
-    cv::minMaxLoc(retImg, &dMinVal, NULL, &ptMin, NULL);
+    cv::minMaxLoc(retImg, &dMinVal, nullptr, &ptMin, nullptr);
 
     int nPartH = partClrImg.rows;
     int nPartW = partClrImg.cols;
@@ -731,11 +721,10 @@ void ExecuteTemplateMatchEx(
   cv::Mat curClrImg, curGryImg;
   curClrImg = cv::imread(strImgFile, cv::IMREAD_COLOR);
   cv::cvtColor(curClrImg, curGryImg, cv::COLOR_BGR2GRAY);
-  for (unsigned int i = 0; i < strPartFileList.size(); ++i) {
+  for (const auto& strPartFile : strPartFileList) {
     // part image
-    std::string strPartFile = strPartFileList.at(i);
     cv::Mat partClrImg = cv::imread(strPartFile, cv::IMREAD_COLOR);
-    if (partClrImg.data == NULL) {
+    if (partClrImg.data == nullptr) {
       continue;
     }
     cv::Mat partGryImg;
@@ -746,7 +735,7 @@ void ExecuteTemplateMatchEx(
     cv::Point ptMin;
     cv::Mat retImg;
     cv::matchTemplate(curGryImg, partGryImg, retImg, cv::TM_SQDIFF);
-    cv::minMaxLoc(retImg, &dMinVal, NULL, &ptMin, NULL);
+    cv::minMaxLoc(retImg, &dMinVal, nullptr, &ptMin, nullptr);
 
     int nPartH = partClrImg.rows;
     int nPartW = partClrImg.cols;
@@ -766,7 +755,7 @@ void ExecuteTemplateMatchEx(
             partClrImg.at<cv::Vec3b>(y - nYs, x - nXs)[2]};
         if (clrPart[0] != clrCur[0] || clrPart[1] != clrCur[1] ||
             clrPart[2] != clrCur[2]) {
-          ptPixList.push_back(cv::Point(x - nXs, y - nYs));
+          ptPixList.emplace_back(x - nXs, y - nYs);
         }
       }
     }
@@ -788,9 +777,8 @@ void ExecuteTemplateMatchEx(
 void CreateDirectory(const std::string& strFolderPath) {
   std::vector<std::string> strFolderList = Split(strFolderPath, "/");
 
-  std::string str = "";
-  for (unsigned int i = 0; i < strFolderList.size(); ++i) {
-    std::string strFolder = strFolderList.at(i);
+  std::string str;
+  for (const auto& strFolder : strFolderList) {
     str += strFolder + "/";
     if (strFolder == "." || strFolder == "..") {
       continue;
@@ -823,8 +811,7 @@ std::vector<std::string> Split(const std::string& s, char delim) {
   std::vector<std::string> elems;
   std::string item;
   std::clog << s << std::endl;
-  for (int i = 0; i < s.size(); ++i) {
-    char ch = s[i];
+  for (char ch : s) {
     if (ch == delim) {
       if (!item.empty()) {
         elems.push_back(item);
@@ -870,7 +857,7 @@ unsigned char* ConvertCVMATtoUCHAR(const cv::Mat& img, const int& nH /*=-1*/,
     h = img.rows;
     w = img.cols;
   }
-  unsigned char* pImg = new unsigned char[w * h * 3];
+  auto* pImg = new unsigned char[w * h * 3];
   for (int y = 0; y < h; ++y) {
     int idx = y * w * 3;
     for (int x = 0; x < w; ++x) {
@@ -887,12 +874,12 @@ unsigned char* ConvertCVMATtoUCHAR(const cv::Mat& img, const int& nH /*=-1*/,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 std::string GetPNGFile(const int& nNum, const std::string& strOutputFolder) {
   std::string strYYYYMMDD, strHHMMSS;
-  GetTimeYYYYMMDDHHMMSS(NULL, strYYYYMMDD, strHHMMSS);
+  GetTimeYYYYMMDDHHMMSS(nullptr, strYYYYMMDD, strHHMMSS);
 
   int nFileNo = nNum;
 
-  bool bIsPartFile = (1 <= nNum && nNum < 5000) ? true : false;
-  if (bIsPartFile == true) {
+  bool bIsPartFile = (1 <= nNum && nNum < 5000);
+  if (bIsPartFile) {
     nFileNo = g_nPartFileNo;
   }
 
@@ -922,7 +909,7 @@ std::string GetPNGFile(const int& nNum, const std::string& strOutputFolder) {
 
   std::string strPNGFileRelativePath = strOutputFolder + strPNGFile;
 
-  if (bIsPartFile == true) {
+  if (bIsPartFile) {
     g_strFileList.push_back(strPNGFileRelativePath);
     ++g_nPartFileNo;
   }
@@ -995,11 +982,11 @@ void ConvertBMPtoPNG(const std::string& strBMPFile,
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
-               unsigned char* pImg) {
-  FILE* pF = NULL;
+               const unsigned char* pImg) {
+  FILE* pF = nullptr;
   // fopen_s(&pF, strFile.c_str(), "wb"); /* for visual studio */
   pF = fopen(strFile.c_str(), "wb"); /* for LINUX */
-  if (pF == NULL) return;
+  if (pF == nullptr) return;
 
   const int kFileHeaderSize = 14;
   const int kInfoHeaderSize = 40;
@@ -1051,7 +1038,7 @@ void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
 
   fwrite(HeaderBuffer, sizeof(unsigned char), kHeaderSize, pF);
 
-  unsigned char* pBMP = new unsigned char[nRealW];
+  auto* pBMP = new unsigned char[nRealW];
   for (int y = 0; y < nH; ++y) {
     int idx = (nH - 1 - y) * nW * 3;
     for (int x = 0; x < nW; ++x, idx += 3) {
@@ -1067,7 +1054,7 @@ void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
   }
 
   delete[] pBMP;
-  pBMP = NULL;
+  pBMP = nullptr;
 
   fclose(pF);
 }
@@ -1076,16 +1063,16 @@ void CreateBMP(const std::string& strFile, const int& nW, const int& nH,
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool GetTimeYYYYMMDDHHMMSS(tm* pTM, std::string& strYYYYMMDD,
                            std::string& strHHMMSS) {
-  if (pTM == NULL) {
-    time_t now = time(NULL);
+  if (pTM == nullptr) {
+    time_t now = time(nullptr);
     pTM = localtime(&now);
   }
 
   return GetTimeYYYYMMDD(pTM, strYYYYMMDD) && GetTimeHHMMSS(pTM, strHHMMSS);
 }
 bool GetTimeYYYYMMDD(tm* pTM, std::string& strYYYYMMDD) {
-  if (pTM == NULL) {
-    time_t now = time(NULL);
+  if (pTM == nullptr) {
+    time_t now = time(nullptr);
     pTM = localtime(&now);
   }
 
@@ -1093,18 +1080,17 @@ bool GetTimeYYYYMMDD(tm* pTM, std::string& strYYYYMMDD) {
   str[0] << pTM->tm_year + 1900;
   str[1] << pTM->tm_mon + 1;
   str[2] << pTM->tm_mday;
-  bool bIsOneDigit[3] = {
-      false, (0 <= pTM->tm_mon && pTM->tm_mon <= 9) ? true : false,
-      (0 <= pTM->tm_mday && pTM->tm_mday <= 9) ? true : false};
+  bool bIsOneDigit[3] = {false, ((0 <= pTM->tm_mon && pTM->tm_mon <= 9)),
+                         ((0 <= pTM->tm_mday && pTM->tm_mday <= 9))};
   for (int i = 0; i < 3; ++i) {
-    strYYYYMMDD += bIsOneDigit[i] == true ? '0' + str[i].str() : str[i].str();
+    strYYYYMMDD += bIsOneDigit[i] ? '0' + str[i].str() : str[i].str();
   }
 
-  return strYYYYMMDD.size() > 0 ? true : false;
+  return !strYYYYMMDD.empty();
 }
 bool GetTimeHHMMSS(tm* pTM, std::string& strHHMMSS) {
-  if (pTM == NULL) {
-    time_t now = time(NULL);
+  if (pTM == nullptr) {
+    time_t now = time(nullptr);
     pTM = localtime(&now);
   }
 
@@ -1112,39 +1098,38 @@ bool GetTimeHHMMSS(tm* pTM, std::string& strHHMMSS) {
   str[0] << pTM->tm_hour;
   str[1] << pTM->tm_min;
   str[2] << pTM->tm_sec;
-  bool bIsOneDigit[3] = {
-      (0 <= pTM->tm_hour && pTM->tm_hour <= 9) ? true : false,
-      (0 <= pTM->tm_min && pTM->tm_min <= 9) ? true : false,
-      (0 <= pTM->tm_sec && pTM->tm_sec <= 9) ? true : false};
+  bool bIsOneDigit[3] = {((0 <= pTM->tm_hour && pTM->tm_hour <= 9)),
+                         ((0 <= pTM->tm_min && pTM->tm_min <= 9)),
+                         ((0 <= pTM->tm_sec && pTM->tm_sec <= 9))};
   for (int i = 0; i < 3; ++i) {
-    strHHMMSS += bIsOneDigit[i] == true ? '0' + str[i].str() : str[i].str();
+    strHHMMSS += bIsOneDigit[i] ? '0' + str[i].str() : str[i].str();
   }
 
-  return strHHMMSS.size() > 0 ? true : false;
+  return !strHHMMSS.empty();
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
-                        unsigned char* pSrcImg,
+                        const unsigned char* pSrcImg,
                         std::vector<std::vector<PixelConnectivity*>*>& solid) {
   {
     std::string strHHMMSS;
-    GetTimeHHMMSS(NULL, strHHMMSS);
+    GetTimeHHMMSS(nullptr, strHHMMSS);
     std::clog << " -> Grouping Start : " << strHHMMSS.c_str() << std::endl;
   }
   const int Xs = 0;
   const int Ys = 0;
   const int Xe = Xs + nSrcW;
   const int Ye = Ys + nSrcH;
-  unsigned char* pImg = new unsigned char[nSrcW * nSrcH];
+  auto* pImg = new unsigned char[nSrcW * nSrcH];
   // create data
   for (int y = Ys; y < Ye; ++y) {
     int idxF = y * nSrcW * 3;
     for (int x = Xs; x < Xe; ++x) {
       int idxE = (y - Ys) * nSrcW + (x - Xs);
       pImg[idxE] = pSrcImg[idxF + 0];  //(pSrcImg[idxF+0] + pSrcImg[idxF+1] +
-                                       //pSrcImg[idxF+2])/3;
+                                       // pSrcImg[idxF+2])/3;
       idxF += 3;
     }
   }
@@ -1154,18 +1139,16 @@ bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
       int idx = (y - Ys) * nSrcW + (x - Xs);
       unsigned char clr = pImg[idx];
       if (clr == 128) {
-        std::vector<PixelConnectivity*>* pShell =
-            new std::vector<PixelConnectivity*>;
-        PixelConnectivity* pPix = new PixelConnectivity;
+        auto* pShell = new std::vector<PixelConnectivity*>;
+        auto* pPix = new PixelConnectivity;
         pPix->nIdx = -1;
         pShell->push_back(pPix);
         solid.push_back(pShell);
         continue;
       }
 
-      std::vector<PixelConnectivity*>* pShell =
-          new std::vector<PixelConnectivity*>;
-      PixelConnectivity* pPix = new PixelConnectivity;
+      auto* pShell = new std::vector<PixelConnectivity*>;
+      auto* pPix = new PixelConnectivity;
       pPix->nIdx = idx;
       pShell->push_back(pPix);
       solid.push_back(pShell);
@@ -1190,12 +1173,11 @@ bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
     bool bIsConnectedShell = false;
     for (unsigned int idxShell = 0; idxShell < solid.size(); ++idxShell) {
       std::vector<PixelConnectivity*>* pShell = solid.at(idxShell);
-      if (pShell == NULL || pShell->size() == 0) continue;
+      if (pShell == nullptr || pShell->empty()) continue;
       if (pShell->size() == 1 && pShell->at(0)->nIdx == -1) {
         delete pShell;
-        pShell = NULL;
-        std::vector<std::vector<PixelConnectivity*>*>::iterator itr =
-            solid.begin() + idxShell;
+        pShell = nullptr;
+        auto itr = solid.begin() + idxShell;
         *itr = NULL;
         continue;
       }
@@ -1204,22 +1186,19 @@ bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
       for (unsigned int idxPix = 0; idxPix < pShell->size(); ++idxPix) {
         PixelConnectivity* pPix = pShell->at(idxPix);
         if (pPix->nIdx == -1) continue;
-        for (unsigned int i = 0; i < pPix->nNeighborIdxList.size(); ++i) {
-          int idxNeighborShell = pPix->nNeighborIdxList.at(i);
+        for (int idxNeighborShell : pPix->nNeighborIdxList) {
           if (idx1stShell != 0 && idx1stShell == idxNeighborShell) continue;
 
           std::vector<PixelConnectivity*>* pNeighborShell =
               solid.at(idxNeighborShell);
-          if (pNeighborShell == NULL || pNeighborShell->size() == 0) continue;
+          if (pNeighborShell == nullptr || pNeighborShell->empty()) continue;
 
-          for (unsigned int j = 0; j < pNeighborShell->size(); ++j) {
-            PixelConnectivity* pNeighborPix = pNeighborShell->at(j);
+          for (auto pNeighborPix : *pNeighborShell) {
             pShell->push_back(pNeighborPix);
           }
           delete pNeighborShell;
-          pNeighborShell = NULL;
-          std::vector<std::vector<PixelConnectivity*>*>::iterator itr =
-              solid.begin() + idxNeighborShell;
+          pNeighborShell = nullptr;
+          auto itr = solid.begin() + idxNeighborShell;
           *itr = NULL;
           bIsConnectedShell = true;
         }
@@ -1228,19 +1207,18 @@ bool GetGroupedDataTest(const int& nSrcW, const int& nSrcH,
         }
       }
     }
-    if (bIsConnectedShell == false) break;
+    if (!bIsConnectedShell) break;
   }
   // delete null pointer shells in solid
   for (unsigned int i = solid.size() - 1; i < solid.size(); --i) {
-    std::vector<std::vector<PixelConnectivity*>*>::iterator itrShell =
-        solid.begin() + i;
+    auto itrShell = solid.begin() + i;
     if (*itrShell == NULL) {
       solid.erase(itrShell);
     }
   }
   {
     std::string strHHMMSS;
-    GetTimeHHMMSS(NULL, strHHMMSS);
+    GetTimeHHMMSS(nullptr, strHHMMSS);
     std::clog << " -> Grouping End : " << strHHMMSS.c_str() << std::endl;
   }
 
