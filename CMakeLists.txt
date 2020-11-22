@@ -45,7 +45,7 @@ else()
     # Works on linux machine
     file(DOWNLOAD https://raw.githubusercontent.com/jarro2783/cxxopts/master/include/cxxopts.hpp ${CMAKE_SOURCE_DIR}/include/cxxopts.hpp)
     include_directories( include/ )
-    add_library(imageDiffCalc STATIC src/imageDiffCalc.cpp )
+    add_library(imageDiffCalc STATIC src/imageDiffCalc.cpp src/image.cpp src/time.cpp src/util.cpp)
     add_executable( ${BIN_NAME} src/main.cpp )
     target_link_libraries( ${BIN_NAME} ${OpenCV_LIBS} imageDiffCalc )
   endif()
